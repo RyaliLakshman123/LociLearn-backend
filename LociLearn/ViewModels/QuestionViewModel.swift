@@ -38,7 +38,8 @@ final class QuestionViewModel: ObservableObject {
     // History
     @Published var answeredQuestions: [AnsweredQuestion] = []  // ✅ NEW
     @Published var showHistory: Bool = false                   // ✅ NEW
-
+    @Published var cachedQuestions: [Question] = []
+    
    // MARK: - Computed
     var correctAnswer: String {
         currentQuestion?.correctAnswer ?? ""
@@ -80,19 +81,38 @@ final class QuestionViewModel: ObservableObject {
         }
     }
 
-    func fetchQuestions() {
+    func fetchQuestions(
+        amount: Int,
+        subject: Subject,
+        difficulty: String
+    ) {
         Task {
             isLoading = true
             errorMessage = nil
+            
             do {
-                let fetched = try await TriviaAPIService.shared.fetchQuestions()
-                questions = fetched
-                currentQuestionIndex = 0
-                answeredQuestions = []
-                score = 0
+                let service = QuestionAPIService()
+                let fetched = try await service.fetchQuestions(
+                    amount: amount,
+                    category: subject.rawValue,
+                    difficulty: difficulty
+                )
+                
+                self.questions = fetched
+                self.cachedQuestions = fetched   // cache
+                self.currentQuestionIndex = 0
+                self.answeredQuestions = []
+                self.score = 0
+                
             } catch {
-                errorMessage = error.localizedDescription
+                // fallback
+                if !cachedQuestions.isEmpty {
+                    self.questions = cachedQuestions
+                } else {
+                    self.errorMessage = error.localizedDescription
+                }
             }
+            
             isLoading = false
         }
     }

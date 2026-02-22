@@ -21,7 +21,7 @@ struct TriviaQuestion: Decodable {
 }
 
 // MARK: - App Model
-struct Question: Identifiable {
+struct Question: Identifiable, Codable {
     let id = UUID()
     let question: String
     let options: [String]

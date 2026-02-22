@@ -1,11 +1,15 @@
 const express = require("express");
-const fetch = require("node-fetch");
 const cors = require("cors");
 
 const app = express();
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
+
+// Root route
+app.get("/", (req, res) => {
+  res.send("Backend working");
+});
 
 app.get("/api/questions", async (req, res) => {
   const { amount = 10, category = 17, difficulty = "medium" } = req.query;
@@ -17,25 +21,29 @@ app.get("/api/questions", async (req, res) => {
 
     const data = await response.json();
 
-    const cleaned = data.results.map((q) => {
-      const decode = (str) =>
-        str
-          .replace(/&quot;/g, '"')
-          .replace(/&#039;/g, "'")
-          .replace(/&amp;/g, "&");
+    if (!data.results) {
+      return res.status(500).json({ error: "Invalid API response" });
+    }
 
-      return {
-        question: decode(q.question),
-        options: shuffle([
-          ...q.incorrect_answers.map(decode),
-          decode(q.correct_answer),
-        ]),
-        correctAnswer: decode(q.correct_answer),
-      };
-    });
+    const decode = (str) =>
+      str
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/&amp;/g, "&");
 
-    res.json({ questions: cleaned });
+    const questions = data.results.map((q) => ({
+      question: decode(q.question),
+      options: shuffle([
+        ...q.incorrect_answers.map(decode),
+        decode(q.correct_answer),
+      ]),
+      correctAnswer: decode(q.correct_answer),
+    }));
+
+    res.json({ questions });
+
   } catch (err) {
+    console.error("Fetch error:", err);
     res.status(500).json({ error: "Failed to fetch questions" });
   }
 });
